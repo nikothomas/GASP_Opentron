@@ -3,6 +3,8 @@ import csv
 import os
 from collections import namedtuple
 import math
+
+import opentrons
 from opentrons import protocol_api
 
 # Metadata
@@ -62,12 +64,22 @@ def get_volumes_needed(num_samples: int, total_water_volume: float) -> required_
                               required_nuclease_free_water_vol)
 
 def add_parameters(parameters):
-    for pos in SAMPLE_POSITIONS:
+    for pos in SAMPLE_POSITIONS[1:8]:
         parameters.add_float(
             variable_name=f"mass_{pos}",
             display_name=f"{pos} Sample Mass",
             description="The Qubit quantified mass of the sample, 0 means no sample present.",
             default=DEFAULT_DNA_MASS,
+            minimum=0,
+            maximum=20,
+            unit="ng"
+        )
+    for pos in SAMPLE_POSITIONS[8:]:
+        parameters.add_float(
+            variable_name=f"mass_{pos}",
+            display_name=f"{pos} Sample Mass",
+            description="The Qubit quantified mass of the sample, 0 means no sample present.",
+            default=0.0,
             minimum=0,
             maximum=20,
             unit="ng"
@@ -122,9 +134,9 @@ def run(protocol: protocol_api.ProtocolContext):
         label='15/50 mL Tube Rack'
     )
     tube_rack_2ml = protocol.load_labware(
-        load_name='opentrons_24_tuberack_nest_2ml_screwcap',
+        load_name='opentrons_24_tuberack_nest_1.5ml_snapcap',
         location=5,
-        label='2 mL Tube Rack'
+        label='1.5 mL Tube Rack'
     )
 
     # Initialize tracking variables

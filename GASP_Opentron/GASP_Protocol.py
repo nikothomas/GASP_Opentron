@@ -1,6 +1,8 @@
 # Import the required libraries from the Opentrons API
 import csv
 import os
+from collections import namedtuple
+
 from opentrons import protocol_api
 
 # Metadata
@@ -11,27 +13,312 @@ metadata = {
     'apiLevel': '2.20'  # Use the latest API level supported by your OT-2
 }
 
-TESTING = 1  # Set to 0 when running on the actual robot
-CSV_FILE_PATH = 'Opentron_input.csv'  # Update this path to a testing CSV file
+# Locations within wells/plates
+A1_LOC_CODE = 'A1'
+A2_LOC_CODE = 'A2'
+A3_LOC_CODE = 'A3'
+A4_LOC_CODE = 'A4'
+A5_LOC_CODE = 'A5'
+A6_LOC_CODE = 'A6'
+B1_LOC_CODE = 'B1'
+B2_LOC_CODE = 'B2'
+B3_LOC_CODE = 'B3'
+B4_LOC_CODE = 'B4'
+B5_LOC_CODE = 'B5'
+B6_LOC_CODE = 'B6'
+C1_LOC_CODE = 'C1'
+C2_LOC_CODE = 'C2'
+C3_LOC_CODE = 'C3'
+C4_LOC_CODE = 'C4'
+C5_LOC_CODE = 'C5'
+C6_LOC_CODE = 'C6'
+D1_LOC_CODE = 'D1'
+D2_LOC_CODE = 'D2'
+D3_LOC_CODE = 'D3'
+D4_LOC_CODE = 'D4'
+D5_LOC_CODE = 'D5'
+D6_LOC_CODE = 'D6'
+NUCLEASE_FREE_LOC_CODE = 'A1'
+ONETAQ_LOC_CODE = 'A2'
+FORWARD_PRIMER_LOC_CODE = 'B1'
+REVERSE_PRIMER_LOC_CODE = 'B2'
+
+# Calculation Constants
 FORWARD_PRIMER_VOLUME_PER_SAMPLE = 1  # 1 µL of forward primer per sample for 25 µL reaction
 REVERSE_PRIMER_VOLUME_PER_SAMPLE = 1  # 1 µL of reverse primer per sample for 25 µL reaction
 REQUIRED_ONETAQ_VOLUME_PER_SAMPLE = 12.5  # 12.5 µL of OneTaq per sample for 25 µL reaction
 
-def get_volumes_needed(num_samples: int):
+# String Constants
+ONETAQ_MASTER_MIX = 'onetaq_master_mix'
+NUCLEASE_FREE_WATER = 'nuclease_free_water'
+FORWARD_PRIMER = 'forward_primer'
+REVERSE_PRIMER = 'reverse_primer'
+
+# Dictionary Keys
+INITIAL_VOLUME_DICT_KEY = 'initial_volume'
+USED_VOLUME_DICT_KEY = 'initial_volume'
+ASPIRATION_VOLUME_DICT_KEY = 'aspiration_volume'
+WATER_VOLUME_DICT_KEY = 'water_volume'
+
+# Parameter Defaults
+DEFAULT_DNA_MASS = 5.0
+required_vol_tuple = namedtuple('required_vols', ['forward_primer', 'reverse_primer', 'onetaq_master_mix', 'nuclease_free_water'])
+
+# Helper function to get the approximate volumes we will require based on the number of samples
+def get_volumes_needed(num_samples: int) -> required_vol_tuple:
     # Calculate required volumes with a small excess (+1 sample) for pipetting errors
     required_forward_primer_vol = (num_samples + 1) * FORWARD_PRIMER_VOLUME_PER_SAMPLE
     required_reverse_primer_vol = (num_samples + 1) * REVERSE_PRIMER_VOLUME_PER_SAMPLE
     required_onetaq_vol = (num_samples + 1) * REQUIRED_ONETAQ_VOLUME_PER_SAMPLE
-    return required_forward_primer_vol, required_reverse_primer_vol, required_onetaq_vol
+    required_nuclease_free_water_vol = 500
+    return required_vol_tuple(required_forward_primer_vol,
+                              required_reverse_primer_vol,
+                              required_onetaq_vol,
+                              required_nuclease_free_water_vol)
 
 def add_parameters(parameters):
-    parameters.add_csv_file(
-        variable_name="dna_masses",
-        display_name="DNA Masses and Locations",
-        description=(
-            "Table with two columns:"
-            " source slot, dna mass,"
-        )
+    # Samples A1-A6
+    parameters.add_float(
+        variable_name="mass_A1",
+        display_name="A1 Sample Mass",
+        description="The Qubit quantified mass of the sample, 0 means no sample present.",
+        default=DEFAULT_DNA_MASS,
+        minimum=0,
+        maximum=20,
+        unit="ng"
+    )
+
+    parameters.add_float(
+        variable_name="mass_A2",
+        display_name="A2 Sample Mass",
+        description="The Qubit quantified mass of the sample, 0 means no sample present.",
+        default=DEFAULT_DNA_MASS,
+        minimum=0,
+        maximum=20,
+        unit="ng"
+    )
+
+    parameters.add_float(
+        variable_name="mass_A3",
+        display_name="A3 Sample Mass",
+        description="The Qubit quantified mass of the sample, 0 means no sample present.",
+        default=DEFAULT_DNA_MASS,
+        minimum=0,
+        maximum=20,
+        unit="ng"
+    )
+
+    parameters.add_float(
+        variable_name="mass_A4",
+        display_name="A4 Sample Mass",
+        description="The Qubit quantified mass of the sample, 0 means no sample present.",
+        default=DEFAULT_DNA_MASS,
+        minimum=0,
+        maximum=20,
+        unit="ng"
+    )
+
+    parameters.add_float(
+        variable_name="mass_A5",
+        display_name="A5 Sample Mass",
+        description="The Qubit quantified mass of the sample, 0 means no sample present.",
+        default=DEFAULT_DNA_MASS,
+        minimum=0,
+        maximum=20,
+        unit="ng"
+    )
+
+    parameters.add_float(
+        variable_name="mass_A6",
+        display_name="A6 Sample Mass",
+        description="The Qubit quantified mass of the sample, 0 means no sample present.",
+        default=DEFAULT_DNA_MASS,
+        minimum=0,
+        maximum=20,
+        unit="ng"
+    )
+
+    # Samples B1-B6
+    parameters.add_float(
+        variable_name="mass_B1",
+        display_name="B1 Sample Mass",
+        description="The Qubit quantified mass of the sample, 0 means no sample present.",
+        default=DEFAULT_DNA_MASS,
+        minimum=0,
+        maximum=20,
+        unit="ng"
+    )
+
+    parameters.add_float(
+        variable_name="mass_B2",
+        display_name="B2 Sample Mass",
+        description="The Qubit quantified mass of the sample, 0 means no sample present.",
+        default=DEFAULT_DNA_MASS,
+        minimum=0,
+        maximum=20,
+        unit="ng"
+    )
+
+    parameters.add_float(
+        variable_name="mass_B3",
+        display_name="B3 Sample Mass",
+        description="The Qubit quantified mass of the sample, 0 means no sample present.",
+        default=DEFAULT_DNA_MASS,
+        minimum=0,
+        maximum=20,
+        unit="ng"
+    )
+
+    parameters.add_float(
+        variable_name="mass_B4",
+        display_name="B4 Sample Mass",
+        description="The Qubit quantified mass of the sample, 0 means no sample present.",
+        default=DEFAULT_DNA_MASS,
+        minimum=0,
+        maximum=20,
+        unit="ng"
+    )
+
+    parameters.add_float(
+        variable_name="mass_B5",
+        display_name="B5 Sample Mass",
+        description="The Qubit quantified mass of the sample, 0 means no sample present.",
+        default=DEFAULT_DNA_MASS,
+        minimum=0,
+        maximum=20,
+        unit="ng"
+    )
+
+    parameters.add_float(
+        variable_name="mass_B6",
+        display_name="B6 Sample Mass",
+        description="The Qubit quantified mass of the sample, 0 means no sample present.",
+        default=DEFAULT_DNA_MASS,
+        minimum=0,
+        maximum=20,
+        unit="ng"
+    )
+
+    # Samples C1-C6
+    parameters.add_float(
+        variable_name="mass_C1",
+        display_name="C1 Sample Mass",
+        description="The Qubit quantified mass of the sample, 0 means no sample present.",
+        default=DEFAULT_DNA_MASS,
+        minimum=0,
+        maximum=20,
+        unit="ng"
+    )
+
+    parameters.add_float(
+        variable_name="mass_C2",
+        display_name="C2 Sample Mass",
+        description="The Qubit quantified mass of the sample, 0 means no sample present.",
+        default=DEFAULT_DNA_MASS,
+        minimum=0,
+        maximum=20,
+        unit="ng"
+    )
+
+    parameters.add_float(
+        variable_name="mass_C3",
+        display_name="C3 Sample Mass",
+        description="The Qubit quantified mass of the sample, 0 means no sample present.",
+        default=DEFAULT_DNA_MASS,
+        minimum=0,
+        maximum=20,
+        unit="ng"
+    )
+
+    parameters.add_float(
+        variable_name="mass_C4",
+        display_name="C4 Sample Mass",
+        description="The Qubit quantified mass of the sample, 0 means no sample present.",
+        default=DEFAULT_DNA_MASS,
+        minimum=0,
+        maximum=20,
+        unit="ng"
+    )
+
+    parameters.add_float(
+        variable_name="mass_C5",
+        display_name="C5 Sample Mass",
+        description="The Qubit quantified mass of the sample, 0 means no sample present.",
+        default=DEFAULT_DNA_MASS,
+        minimum=0,
+        maximum=20,
+        unit="ng"
+    )
+
+    parameters.add_float(
+        variable_name="mass_C6",
+        display_name="C6 Sample Mass",
+        description="The Qubit quantified mass of the sample, 0 means no sample present.",
+        default=DEFAULT_DNA_MASS,
+        minimum=0,
+        maximum=20,
+        unit="ng"
+    )
+
+    # Samples D1-D6
+    parameters.add_float(
+        variable_name="mass_D1",
+        display_name="D1 Sample Mass",
+        description="The Qubit quantified mass of the sample, 0 means no sample present.",
+        default=DEFAULT_DNA_MASS,
+        minimum=0,
+        maximum=20,
+        unit="ng"
+    )
+
+    parameters.add_float(
+        variable_name="mass_D2",
+        display_name="D2 Sample Mass",
+        description="The Qubit quantified mass of the sample, 0 means no sample present.",
+        default=DEFAULT_DNA_MASS,
+        minimum=0,
+        maximum=20,
+        unit="ng"
+    )
+
+    parameters.add_float(
+        variable_name="mass_D3",
+        display_name="D3 Sample Mass",
+        description="The Qubit quantified mass of the sample, 0 means no sample present.",
+        default=DEFAULT_DNA_MASS,
+        minimum=0,
+        maximum=20,
+        unit="ng"
+    )
+
+    parameters.add_float(
+        variable_name="mass_D4",
+        display_name="D4 Sample Mass",
+        description="The Qubit quantified mass of the sample, 0 means no sample present.",
+        default=DEFAULT_DNA_MASS,
+        minimum=0,
+        maximum=20,
+        unit="ng"
+    )
+
+    parameters.add_float(
+        variable_name="mass_D5",
+        display_name="D5 Sample Mass",
+        description="The Qubit quantified mass of the sample, 0 means no sample present.",
+        default=DEFAULT_DNA_MASS,
+        minimum=0,
+        maximum=20,
+        unit="ng"
+    )
+
+    parameters.add_float(
+        variable_name="mass_D6",
+        display_name="D6 Sample Mass",
+        description="The Qubit quantified mass of the sample, 0 means no sample present.",
+        default=DEFAULT_DNA_MASS,
+        minimum=0,
+        maximum=20,
+        unit="ng"
     )
 
 def run(protocol: protocol_api.ProtocolContext):
@@ -52,8 +339,81 @@ def run(protocol: protocol_api.ProtocolContext):
         name="Forward Primer", description="", display_color="#E1FF05"
     )
     onetaq_master_mix = protocol.define_liquid(
-        name="OneTaq Master Mix", description="", display_color="#E1FF05"
+        name="OneTaq Master Mix", description="", display_color="#CCAB68"
     )
+    Template_DNA_liquid_A1 = protocol.define_liquid(
+        name="Sample A1 liquid", description="", display_color="#163D20",
+    )
+    Template_DNA_liquid_A2 = protocol.define_liquid(
+        name="Sample A2 liquid", description="", display_color="#163D20",
+    )
+    Template_DNA_liquid_A3 = protocol.define_liquid(
+        name="Sample A3 liquid", description="", display_color="#163D20",
+    )
+    Template_DNA_liquid_A4 = protocol.define_liquid(
+        name="Sample A4 liquid", description="", display_color="#163D20",
+    )
+    Template_DNA_liquid_A5 = protocol.define_liquid(
+        name="Sample A5 liquid", description="", display_color="#163D20",
+    )
+    Template_DNA_liquid_A6 = protocol.define_liquid(
+        name="Sample A6 liquid", description="", display_color="#163D20",
+    )
+    Template_DNA_liquid_B1 = protocol.define_liquid(
+        name="Sample B1 liquid", description="", display_color="#163D20",
+    )
+    Template_DNA_liquid_B2 = protocol.define_liquid(
+        name="Sample B2 liquid", description="", display_color="#163D20",
+    )
+    Template_DNA_liquid_B3 = protocol.define_liquid(
+        name="Sample B3 liquid", description="", display_color="#163D20",
+    )
+    Template_DNA_liquid_B4 = protocol.define_liquid(
+        name="Sample B4 liquid", description="", display_color="#163D20",
+    )
+    Template_DNA_liquid_B5 = protocol.define_liquid(
+        name="Sample B5 liquid", description="", display_color="#163D20",
+    )
+    Template_DNA_liquid_B6 = protocol.define_liquid(
+        name="Sample B6 liquid", description="", display_color="#163D20",
+    )
+    Template_DNA_liquid_C1 = protocol.define_liquid(
+        name="Sample C1 liquid", description="", display_color="#163D20",
+    )
+    Template_DNA_liquid_C2 = protocol.define_liquid(
+        name="Sample C2 liquid", description="", display_color="#163D20",
+    )
+    Template_DNA_liquid_C3 = protocol.define_liquid(
+        name="Sample C3 liquid", description="", display_color="#163D20",
+    )
+    Template_DNA_liquid_C4 = protocol.define_liquid(
+        name="Sample C4 liquid", description="", display_color="#163D20",
+    )
+    Template_DNA_liquid_C5 = protocol.define_liquid(
+        name="Sample C5 liquid", description="", display_color="#163D20",
+    )
+    Template_DNA_liquid_C6 = protocol.define_liquid(
+        name="Sample C6 liquid", description="", display_color="#163D20",
+    )
+    Template_DNA_liquid_D1 = protocol.define_liquid(
+        name="Sample D1 liquid", description="", display_color="#163D20",
+    )
+    Template_DNA_liquid_D2 = protocol.define_liquid(
+        name="Sample D2 liquid", description="", display_color="#163D20",
+    )
+    Template_DNA_liquid_D3 = protocol.define_liquid(
+        name="Sample D3 liquid", description="", display_color="#163D20",
+    )
+    Template_DNA_liquid_D4 = protocol.define_liquid(
+        name="Sample D4 liquid", description="", display_color="#163D20",
+    )
+    Template_DNA_liquid_D5 = protocol.define_liquid(
+        name="Sample D5 liquid", description="", display_color="#163D20",
+    )
+    Template_DNA_liquid_D6 = protocol.define_liquid(
+        name="Sample D6 liquid", description="", display_color="#163D20",
+    )
+
 
     # Load pipettes
     p20_single = protocol.load_instrument(
@@ -83,12 +443,9 @@ def run(protocol: protocol_api.ProtocolContext):
         location=5,
         label='2 mL Tube Rack'
     )
-    temp_module = protocol.load_module(
-        module_name='temperature module gen2',
-        location=10
-    )
 
     # Initialize tracking variables
+    num_samples = 0
     pcr_well_compositions = {}
     total_master_mix_used = 0.0
     total_forward_primer_used = 0.0
@@ -96,98 +453,103 @@ def run(protocol: protocol_api.ProtocolContext):
     total_water_used = 0.0
     total_dna_used_per_sample = []
     # For DNA tubes, create a dict to track volumes used and final volumes
-    dna_tube_volumes = {}  # key: tube_location, value: {'initial_volume':20.0, 'used_volume':0.0}
+    dna_info: dict[str:[dict[str:float, str:float, str:float]]] = {}  # key: tube_location, value: {'initial_volume':20.0, 'used_volume':0.0, 'aspiration_volume: 1.0'}
 
-    # Read the CSV data
-    if TESTING == 1:
-        if not os.path.exists(CSV_FILE_PATH):
-            protocol.comment(f"CSV file not found at {CSV_FILE_PATH}.")
-            return
-        else:
-            with open(CSV_FILE_PATH, 'r') as csvfile:
-                csv_reader = csv.reader(csvfile)
-                csv_data = list(csv_reader)
-    else:
-        csv_data = protocol.params.dna_masses.parse_as_csv()
+    sample_masses = [protocol.params.mass_A1, protocol.params.mass_A2, protocol.params.mass_A3, protocol.params.mass_A4, protocol.params.mass_A5, protocol.params.mass_A6,
+                      protocol.params.mass_B1, protocol.params.mass_B2, protocol.params.mass_B3, protocol.params.mass_B4, protocol.params.mass_B5, protocol.params.mass_B6,
+                      protocol.params.mass_C1, protocol.params.mass_C2, protocol.params.mass_C3, protocol.params.mass_C4, protocol.params.mass_C5, protocol.params.mass_C6,
+                      protocol.params.mass_D1, protocol.params.mass_D2, protocol.params.mass_D3, protocol.params.mass_D4, protocol.params.mass_D5, protocol.params.mass_D6,]
 
-    # Parse the CSV data
-    sample_data = []
-    for row in csv_data:
-        if len(row) >= 2:
-            tube_location = row[0].strip()
-            try:
-                dna_mass = float(row[1].strip())
-                sample_data.append({'tube_location': tube_location, 'dna_mass': dna_mass})
-            except ValueError:
-                protocol.comment(f"Invalid DNA mass '{row[1]}' at tube location '{tube_location}'. Skipping.")
-        else:
-            protocol.comment(f"Incomplete row '{row}'. Skipping.")
+    sample_tubes = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6',
+                        'B1', 'B2', 'B3', 'B4', 'B5', 'B6',
+                        'C1', 'C2', 'C3', 'C4', 'C5', 'C6',
+                        'D1', 'D2', 'D3', 'D4', 'D5', 'D6']
 
-    # Proceed only if there are samples
-    if not sample_data:
-        protocol.comment("No valid sample data provided in CSV.")
-        return
-
-    # Determine the number of samples
-    num_samples = len(sample_data)
+    for i, mass in enumerate(sample_masses):
+            aspiration_volume = 0.0
+            water_volume = 0.0
+            initial_volume = 0.0
+            # Calculate water volume
+            if mass > 0.01:
+                num_samples += 1
+                initial_volume = 20.0
+                aspiration_volume = 10 / mass
+                water_volume = 25.0 - (12.5 + 1.0 + 1.0 + aspiration_volume)
+            dna_info[sample_tubes[i]] = {INITIAL_VOLUME_DICT_KEY: initial_volume,
+                                                     USED_VOLUME_DICT_KEY: 0.0, 
+                                                     ASPIRATION_VOLUME_DICT_KEY: aspiration_volume,
+                                                     WATER_VOLUME_DICT_KEY: water_volume}
 
     # Calculate required reagent volumes using the helper function
-    (
-        required_forward_primer_vol,
-        required_reverse_primer_vol,
-        required_onetaq_vol
-    ) = get_volumes_needed(num_samples)
+    required_volumes = get_volumes_needed(num_samples)
+
+    protocol.pause(f"\nPlease load the following to the tube rack:\n"
+                   f"{required_volumes.nuclease_free_water}ul {nuclease_free_water.name} into the tube rack at position {NUCLEASE_FREE_LOC_CODE}\n"
+                   f"{required_volumes.onetaq_master_mix}ul {onetaq_master_mix.name} into the tube rack at position {ONETAQ_LOC_CODE}\n"
+                   f"{required_volumes.forward_primer}ul {forward_primer.name} into the tube rack at position {FORWARD_PRIMER_LOC_CODE}\n"
+                   f"{required_volumes.reverse_primer}ul {reverse_primer.name} into the tube rack at position {REVERSE_PRIMER_LOC_CODE}\n")
 
     # Assign reagents to specific wells and load calculated volumes
     nuclease_free_water_wells = tube_rack_15_50ml.wells_by_name()['A1']
-    # For nuclease-free water, estimate required volume
-    total_water_needed = 0  # Will be updated after calculating water volumes
-    nuclease_free_water_wells.load_liquid(liquid=nuclease_free_water, volume=1000)  # Adjust if necessary
+    nuclease_free_water_wells.load_liquid(liquid=nuclease_free_water, volume=required_volumes.nuclease_free_water)  # Adjust if necessary
 
     onetaq_master_mix_wells = tube_rack_15_50ml.wells_by_name()['A2']
-    onetaq_master_mix_wells.load_liquid(liquid=onetaq_master_mix, volume=required_onetaq_vol)
+    onetaq_master_mix_wells.load_liquid(liquid=onetaq_master_mix, volume=required_volumes.onetaq_master_mix)
 
     reverse_primer_wells = tube_rack_15_50ml.wells_by_name()['B1']
-    reverse_primer_wells.load_liquid(liquid=reverse_primer, volume=required_reverse_primer_vol)
+    reverse_primer_wells.load_liquid(liquid=reverse_primer, volume=required_volumes.reverse_primer)
 
     forward_primer_wells = tube_rack_15_50ml.wells_by_name()['B2']
-    forward_primer_wells.load_liquid(liquid=forward_primer, volume=required_forward_primer_vol)
+    forward_primer_wells.load_liquid(liquid=forward_primer, volume=required_volumes.forward_primer)
 
-    # Template DNA wells are in the 24-well plate (tube_rack_2ml)
-
-    # Map tube locations to wells in tube_rack_2ml
-    tube_rack_positions = [well.well_name for well in tube_rack_2ml.wells()]
-    source_wells = []
-    valid_samples = []
-
-    for sample in sample_data:
-        tube_location = sample['tube_location']
-        if tube_location in tube_rack_positions:
-            source_well = tube_rack_2ml.wells_by_name()[tube_location]
-            source_wells.append(source_well)
-            valid_samples.append(sample)
-            # Assign the template_dna liquid to the source_well
-            source_well.load_liquid(liquid=template_dna, volume=20)
-            # Initialize DNA tube volumes tracking
-            dna_tube_volumes[tube_location] = {'initial_volume': 20.0, 'used_volume': 0.0}
-        else:
-            protocol.comment(f"Tube location '{tube_location}' not found in tube rack. Skipping sample.")
-
-    # Update sample_data to only include valid samples
-    sample_data = valid_samples
-    num_samples = len(sample_data)  # Recalculate in case some samples were skipped
-
-    # Recalculate required reagent volumes if the number of valid samples has changed
-    (
-        required_forward_primer_vol,
-        required_reverse_primer_vol,
-        required_onetaq_vol
-    ) = get_volumes_needed(num_samples)
-
-    # Adjust loaded volumes if necessary
-    onetaq_master_mix_wells.load_liquid(liquid=onetaq_master_mix, volume=required_onetaq_vol)
-    reverse_primer_wells.load_liquid(liquid=reverse_primer, volume=required_reverse_primer_vol)
-    forward_primer_wells.load_liquid(liquid=forward_primer, volume=required_forward_primer_vol)
+    Template_DNA_well_A1 = tube_rack_2ml.wells_by_name()['A1']
+    Template_DNA_well_A2 = tube_rack_2ml.wells_by_name()['A2']
+    Template_DNA_well_A3 = tube_rack_2ml.wells_by_name()['A3']
+    Template_DNA_well_A4 = tube_rack_2ml.wells_by_name()['A4']
+    Template_DNA_well_A5 = tube_rack_2ml.wells_by_name()['A5']
+    Template_DNA_well_A6 = tube_rack_2ml.wells_by_name()['A6']
+    Template_DNA_well_B1 = tube_rack_2ml.wells_by_name()['B1']
+    Template_DNA_well_B2 = tube_rack_2ml.wells_by_name()['B2']
+    Template_DNA_well_B3 = tube_rack_2ml.wells_by_name()['B3']
+    Template_DNA_well_B4 = tube_rack_2ml.wells_by_name()['B4']
+    Template_DNA_well_B5 = tube_rack_2ml.wells_by_name()['B5']
+    Template_DNA_well_B6 = tube_rack_2ml.wells_by_name()['B6']
+    Template_DNA_well_C1 = tube_rack_2ml.wells_by_name()['C1']
+    Template_DNA_well_C2 = tube_rack_2ml.wells_by_name()['C2']
+    Template_DNA_well_C3 = tube_rack_2ml.wells_by_name()['C3']
+    Template_DNA_well_C4 = tube_rack_2ml.wells_by_name()['C4']
+    Template_DNA_well_C5 = tube_rack_2ml.wells_by_name()['C5']
+    Template_DNA_well_C6 = tube_rack_2ml.wells_by_name()['C6']
+    Template_DNA_well_D1 = tube_rack_2ml.wells_by_name()['D1']
+    Template_DNA_well_D2 = tube_rack_2ml.wells_by_name()['D2']
+    Template_DNA_well_D3 = tube_rack_2ml.wells_by_name()['D3']
+    Template_DNA_well_D4 = tube_rack_2ml.wells_by_name()['D4']
+    Template_DNA_well_D5 = tube_rack_2ml.wells_by_name()['D5']
+    Template_DNA_well_D6 = tube_rack_2ml.wells_by_name()['D6']
+    Template_DNA_well_A1.load_liquid(liquid=Template_DNA_liquid_A1, volume=dna_info[A1_LOC_CODE][INITIAL_VOLUME_DICT_KEY])
+    Template_DNA_well_A2.load_liquid(liquid=Template_DNA_liquid_A2, volume=dna_info[A2_LOC_CODE][INITIAL_VOLUME_DICT_KEY])
+    Template_DNA_well_A3.load_liquid(liquid=Template_DNA_liquid_A3, volume=dna_info[A3_LOC_CODE][INITIAL_VOLUME_DICT_KEY])
+    Template_DNA_well_A4.load_liquid(liquid=Template_DNA_liquid_A4, volume=dna_info[A4_LOC_CODE][INITIAL_VOLUME_DICT_KEY])
+    Template_DNA_well_A5.load_liquid(liquid=Template_DNA_liquid_A5, volume=dna_info[A5_LOC_CODE][INITIAL_VOLUME_DICT_KEY])
+    Template_DNA_well_A6.load_liquid(liquid=Template_DNA_liquid_A6, volume=dna_info[A6_LOC_CODE][INITIAL_VOLUME_DICT_KEY])
+    Template_DNA_well_B1.load_liquid(liquid=Template_DNA_liquid_B1, volume=dna_info[B1_LOC_CODE][INITIAL_VOLUME_DICT_KEY])
+    Template_DNA_well_B2.load_liquid(liquid=Template_DNA_liquid_B2, volume=dna_info[B2_LOC_CODE][INITIAL_VOLUME_DICT_KEY])
+    Template_DNA_well_B3.load_liquid(liquid=Template_DNA_liquid_B3, volume=dna_info[B3_LOC_CODE][INITIAL_VOLUME_DICT_KEY])
+    Template_DNA_well_B4.load_liquid(liquid=Template_DNA_liquid_B4, volume=dna_info[B4_LOC_CODE][INITIAL_VOLUME_DICT_KEY])
+    Template_DNA_well_B5.load_liquid(liquid=Template_DNA_liquid_B5, volume=dna_info[B5_LOC_CODE][INITIAL_VOLUME_DICT_KEY])
+    Template_DNA_well_B6.load_liquid(liquid=Template_DNA_liquid_B6, volume=dna_info[B6_LOC_CODE][INITIAL_VOLUME_DICT_KEY])
+    Template_DNA_well_C1.load_liquid(liquid=Template_DNA_liquid_C1, volume=dna_info[C1_LOC_CODE][INITIAL_VOLUME_DICT_KEY])
+    Template_DNA_well_C2.load_liquid(liquid=Template_DNA_liquid_C2, volume=dna_info[C2_LOC_CODE][INITIAL_VOLUME_DICT_KEY])
+    Template_DNA_well_C3.load_liquid(liquid=Template_DNA_liquid_C3, volume=dna_info[C3_LOC_CODE][INITIAL_VOLUME_DICT_KEY])
+    Template_DNA_well_C4.load_liquid(liquid=Template_DNA_liquid_C4, volume=dna_info[C4_LOC_CODE][INITIAL_VOLUME_DICT_KEY])
+    Template_DNA_well_C5.load_liquid(liquid=Template_DNA_liquid_C5, volume=dna_info[C5_LOC_CODE][INITIAL_VOLUME_DICT_KEY])
+    Template_DNA_well_C6.load_liquid(liquid=Template_DNA_liquid_C6, volume=dna_info[C6_LOC_CODE][INITIAL_VOLUME_DICT_KEY])
+    Template_DNA_well_D1.load_liquid(liquid=Template_DNA_liquid_D1, volume=dna_info[D1_LOC_CODE][INITIAL_VOLUME_DICT_KEY])
+    Template_DNA_well_D2.load_liquid(liquid=Template_DNA_liquid_D2, volume=dna_info[D2_LOC_CODE][INITIAL_VOLUME_DICT_KEY])
+    Template_DNA_well_D3.load_liquid(liquid=Template_DNA_liquid_D3, volume=dna_info[D3_LOC_CODE][INITIAL_VOLUME_DICT_KEY])
+    Template_DNA_well_D4.load_liquid(liquid=Template_DNA_liquid_D4, volume=dna_info[D4_LOC_CODE][INITIAL_VOLUME_DICT_KEY])
+    Template_DNA_well_D5.load_liquid(liquid=Template_DNA_liquid_D5, volume=dna_info[D5_LOC_CODE][INITIAL_VOLUME_DICT_KEY])
+    Template_DNA_well_D6.load_liquid(liquid=Template_DNA_liquid_D6, volume=dna_info[D6_LOC_CODE][INITIAL_VOLUME_DICT_KEY])
 
     # Define destination wells on the PCR plate (from A10 to H12)
     all_destination_wells = [
@@ -198,27 +560,6 @@ def run(protocol: protocol_api.ProtocolContext):
 
     # Re-adjust destination wells if any samples were skipped
     destination_wells = all_destination_wells[:num_samples]
-
-    # Calculate DNA volumes and water volumes
-    dna_volumes = []
-    water_volumes = []
-    for sample in sample_data:
-        mass = sample['dna_mass']
-        vol_dna = mass * 0.1  # in µL
-        # Ensure DNA volume is within pipette limits
-        if vol_dna < 1.0:
-            vol_dna = 1.0
-        elif vol_dna > 20.0:
-            vol_dna = 20.0
-            protocol.comment(f"DNA volume for mass {mass} exceeds 20 µL. Set to 20 µL.")
-        dna_volumes.append(vol_dna)
-        # Calculate water volume
-        vol_water = 25.0 - (12.5 + 1.0 + 1.0 + vol_dna)
-        if vol_water < 0:
-            vol_water = 0.0
-            protocol.comment(f"Total volume exceeds 25 µL for mass {mass}. No water added.")
-        water_volumes.append(vol_water)
-        total_water_needed += vol_water  # Update total water needed
 
     # Step 1: Add OneTaq 2X Master Mix (12.5 µL) to each PCR well
     p20_single.pick_up_tip(tip_rack_20ul.wells_by_name()['A1'])
@@ -269,9 +610,10 @@ def run(protocol: protocol_api.ProtocolContext):
     p20_single.drop_tip()
 
     # Step 4: Transfer Variable Volumes of Template DNA from tube rack to PCR plate
-    for i, (source_well, dest_well_name) in enumerate(zip(source_wells, destination_wells)):
+    for i, (sample_tube_name, dest_well_name) in enumerate(zip(sample_tubes, destination_wells)):
         dest_well = pcr_plate.wells_by_name()[dest_well_name]
-        vol_dna = dna_volumes[i]
+        source_well = tube_rack_2ml.wells_by_name()[sample_tube_name]
+        vol_dna = dna_info[sample_tube_name][ASPIRATION_VOLUME_DICT_KEY]
         p20_single.pick_up_tip()
         p20_single.aspirate(vol_dna, source_well.bottom(z=1))
         protocol.comment(f"Aspirated {vol_dna} µL of Template DNA from {source_well}.")
@@ -282,24 +624,22 @@ def run(protocol: protocol_api.ProtocolContext):
         # Update volumes
         total_dna_used_per_sample.append(vol_dna)
         pcr_well_compositions[dest_well_name]['dna_volume'] = vol_dna
-        # Update dna_tube_volumes
-        tube_location = sample_data[i]['tube_location']
-        dna_tube_volumes[tube_location]['used_volume'] += vol_dna
+        dna_info[sample_tube_name][USED_VOLUME_DICT_KEY] += vol_dna
 
     # Step 5: Add Nuclease-Free Water to each PCR well to bring volume to 25 µL
-    for i, well_name in enumerate(destination_wells):
-        dest_well = pcr_plate.wells_by_name()[well_name]
-        vol_water = water_volumes[i]
+    for i, (sample_tube_name, dest_well_name) in enumerate(zip(sample_tubes, destination_wells)):
+        dest_well = pcr_plate.wells_by_name()[dest_well_name]
+        vol_water = dna_info[sample_tube_name][WATER_VOLUME_DICT_KEY]
         if vol_water > 0:
             p20_single.pick_up_tip()
             p20_single.aspirate(vol_water, nuclease_free_water_wells.bottom(z=1))
             protocol.comment(f"Aspirated {vol_water} µL of Nuclease-Free Water from {nuclease_free_water_wells}.")
             p20_single.dispense(vol_water, dest_well.bottom(z=1))
-            protocol.comment(f"Dispensed {vol_water} µL of Nuclease-Free Water into well {well_name}.")
+            protocol.comment(f"Dispensed {vol_water} µL of Nuclease-Free Water into well {dest_well_name}.")
             p20_single.touch_tip(dest_well)
             p20_single.drop_tip()
             total_water_used += vol_water
-            pcr_well_compositions[well_name]['water_volume'] = vol_water
+            pcr_well_compositions[dest_well_name]['water_volume'] = vol_water
 
     # Step 6: Mix the contents of each well using the multichannel pipette
     # Group destination wells by column for multichannel pipetting
@@ -337,24 +677,24 @@ def run(protocol: protocol_api.ProtocolContext):
 
     # Final volumes for all tubes with liquid
     protocol.comment("Final volumes for all tubes with liquid:")
-    onetaq_master_mix_initial = required_onetaq_vol
+    onetaq_master_mix_initial = required_volumes.onetaq_master_mix
     onetaq_master_mix_final = onetaq_master_mix_initial - total_master_mix_used
     protocol.comment(f"OneTaq Master Mix: Final Volume = {onetaq_master_mix_final} µL")
 
-    forward_primer_initial = required_forward_primer_vol
+    forward_primer_initial = required_volumes.forward_primer
     forward_primer_final = forward_primer_initial - total_forward_primer_used
     protocol.comment(f"Forward Primer: Final Volume = {forward_primer_final} µL")
 
-    reverse_primer_initial = required_reverse_primer_vol
+    reverse_primer_initial = required_volumes.reverse_primer
     reverse_primer_final = reverse_primer_initial - total_reverse_primer_used
     protocol.comment(f"Reverse Primer: Final Volume = {reverse_primer_final} µL")
 
-    nuclease_free_water_final = 1000 - total_water_used
+    nuclease_free_water_final = required_volumes.nuclease_free_water - total_water_used
     protocol.comment(f"Nuclease-Free Water: Final Volume = {nuclease_free_water_final} µL")
 
-    for tube_location, volumes in dna_tube_volumes.items():
-        initial_volume = volumes['initial_volume']
-        used_volume = volumes['used_volume']
+    for tube_location, volumes in dna_info.items():
+        initial_volume = volumes[INITIAL_VOLUME_DICT_KEY]
+        used_volume = volumes[USED_VOLUME_DICT_KEY]
         final_volume = initial_volume - used_volume
         protocol.comment(f"Template DNA Tube {tube_location}: Final Volume = {final_volume} µL")
 

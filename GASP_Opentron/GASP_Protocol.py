@@ -64,22 +64,12 @@ def get_volumes_needed(num_samples: int, total_water_volume: float) -> required_
                               required_nuclease_free_water_vol)
 
 def add_parameters(parameters):
-    for pos in SAMPLE_POSITIONS[1:8]:
+    for pos in SAMPLE_POSITIONS:
         parameters.add_float(
             variable_name=f"mass_{pos}",
             display_name=f"{pos} Sample Mass",
             description="The Qubit quantified mass of the sample, 0 means no sample present.",
             default=DEFAULT_DNA_MASS,
-            minimum=0,
-            maximum=20,
-            unit="ng"
-        )
-    for pos in SAMPLE_POSITIONS[8:]:
-        parameters.add_float(
-            variable_name=f"mass_{pos}",
-            display_name=f"{pos} Sample Mass",
-            description="The Qubit quantified mass of the sample, 0 means no sample present.",
-            default=0.0,
             minimum=0,
             maximum=20,
             unit="ng"
@@ -222,7 +212,6 @@ def run(protocol: protocol_api.ProtocolContext):
         dest_well = pcr_plate.wells_by_name()[well_name]
         p20_single.aspirate(ONETAQ_VOLUME_PER_SAMPLE, onetaq_master_mix_wells.bottom(z=1))
         p20_single.dispense(ONETAQ_VOLUME_PER_SAMPLE, dest_well.bottom(z=1))
-        p20_single.touch_tip(dest_well)
         total_master_mix_used += ONETAQ_VOLUME_PER_SAMPLE
         pcr_well_compositions[well_name] = {
             'well_name': well_name,
@@ -243,7 +232,6 @@ def run(protocol: protocol_api.ProtocolContext):
         dest_well = pcr_plate.wells_by_name()[well_name]
         p20_single.aspirate(FORWARD_PRIMER_VOLUME_PER_SAMPLE, forward_primer_wells.bottom(z=1))
         p20_single.dispense(FORWARD_PRIMER_VOLUME_PER_SAMPLE, dest_well.bottom(z=1))
-        p20_single.touch_tip(dest_well)
         total_forward_primer_used += FORWARD_PRIMER_VOLUME_PER_SAMPLE
         pcr_well_compositions[well_name]['forward_primer'] = FORWARD_PRIMER_VOLUME_PER_SAMPLE
     p20_single.drop_tip()
@@ -257,7 +245,6 @@ def run(protocol: protocol_api.ProtocolContext):
         dest_well = pcr_plate.wells_by_name()[well_name]
         p20_single.aspirate(REVERSE_PRIMER_VOLUME_PER_SAMPLE, reverse_primer_wells.bottom(z=1))
         p20_single.dispense(REVERSE_PRIMER_VOLUME_PER_SAMPLE, dest_well.bottom(z=1))
-        p20_single.touch_tip(dest_well)
         total_reverse_primer_used += REVERSE_PRIMER_VOLUME_PER_SAMPLE
         pcr_well_compositions[well_name]['reverse_primer'] = REVERSE_PRIMER_VOLUME_PER_SAMPLE
     p20_single.drop_tip()
@@ -274,7 +261,6 @@ def run(protocol: protocol_api.ProtocolContext):
             p20_single.pick_up_tip()
             p20_single.aspirate(vol_dna, source_well.bottom(z=1))
             p20_single.dispense(vol_dna, dest_well.bottom(z=1))
-            p20_single.touch_tip(dest_well)
             p20_single.drop_tip()
             total_dna_used_per_sample.append(vol_dna)
             pcr_well_compositions[dest_well_name]['dna_volume'] = vol_dna
@@ -291,7 +277,6 @@ def run(protocol: protocol_api.ProtocolContext):
             p20_single.pick_up_tip()
             p20_single.aspirate(vol_water, nuclease_free_water_wells.bottom(z=1))
             p20_single.dispense(vol_water, dest_well.bottom(z=1))
-            p20_single.touch_tip(dest_well)
             p20_single.drop_tip()
             total_water_used += vol_water
             pcr_well_compositions[dest_well_name]['water_volume'] = vol_water
@@ -302,7 +287,6 @@ def run(protocol: protocol_api.ProtocolContext):
         dest_wells = pcr_plate.columns_by_name()[column]
         p20_multi.pick_up_tip()
         p20_multi.mix(MIX_REPETITIONS, MIX_VOLUME, dest_wells[0].bottom(z=1))
-        p20_multi.touch_tip()
         p20_multi.drop_tip()
 
     # Verbose Output at the End of the Protocol
